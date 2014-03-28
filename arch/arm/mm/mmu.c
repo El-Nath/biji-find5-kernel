@@ -33,6 +33,8 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 
+#include <asm/user_accessible_timer.h>
+
 #include "mm.h"
 
 /*
@@ -308,6 +310,13 @@ static struct mem_type mem_types[] = {
 		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY,
 		.prot_l1   = PMD_TYPE_TABLE,
 		.domain    = DOMAIN_KERNEL,
+	},
+	[MT_DEVICE_USER_ACCESSIBLE] = {
+		.prot_pte  = PROT_PTE_DEVICE | L_PTE_MT_DEV_SHARED |
+				L_PTE_SHARED | L_PTE_USER | L_PTE_RDONLY,
+		.prot_l1   = PMD_TYPE_TABLE,
+		.prot_sect = PROT_SECT_DEVICE | PMD_SECT_S,
+		.domain    = DOMAIN_IO,
 	},
 };
 
@@ -764,7 +773,9 @@ static void __init create_mapping(struct map_desc *md, bool force_pages)
 	const struct mem_type *type;
 	pgd_t *pgd;
 
-	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) {
+	if ((md->virtual != vectors_base() &&
+		md->virtual != get_user_accessible_timers_base()) &&
+			md->virtual < TASK_SIZE) {
 		printk(KERN_WARNING "BUG: not creating mapping for 0x%08llx"
 		       " at 0x%08lx in user region\n",
 		       (long long)__pfn_to_phys((u64)md->pfn), md->virtual);
@@ -1183,7 +1194,11 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	map.pfn = __phys_to_pfn(virt_to_phys(vectors));
 	map.virtual = 0xffff0000;
 	map.length = PAGE_SIZE;
+#ifdef CONFIG_KUSER_HELPERS
 	map.type = MT_HIGH_VECTORS;
+#else
+	map.type = MT_LOW_VECTORS;
+#endif
 	create_mapping(&map, false);
 
 	if (!vectors_high()) {
@@ -1192,12 +1207,33 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 		create_mapping(&map, false);
 	}
 
+	/* Now create a kernel read-only mapping */
+	map.pfn += 1;
+	map.virtual = 0xffff0000 + PAGE_SIZE;
+	map.length = PAGE_SIZE;
+	map.type = MT_LOW_VECTORS;
+	create_mapping(&map, false);
+
 	/*
 	 * Ask the machine support to map in the statically mapped devices.
 	 */
 	if (mdesc->map_io)
 		mdesc->map_io();
 	fill_pmd_gaps();
+
+	if (use_user_accessible_timers()) {
+		/*
+		 * Generate a mapping for the timer page.
+		 */
+		int page_addr = get_timer_page_address();
+		if (page_addr != ARM_USER_ACCESSIBLE_TIMERS_INVALID_PAGE) {
+			map.pfn = __phys_to_pfn(page_addr);
+			map.virtual = CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE;
+			map.length = PAGE_SIZE;
+			map.type = MT_DEVICE_USER_ACCESSIBLE;
+			create_mapping(&map, false);
+		}
+	}
 
 	/*
 	 * Finally flush the caches and tlb to ensure that we're in a
@@ -1379,18 +1415,6 @@ static void __init map_lowmem(void)
 
 		create_mapping(&map, false);
 	}
-
-#ifdef CONFIG_DEBUG_RODATA
-	start = __pa(_stext) & PMD_MASK;
-	end = ALIGN(__pa(__end_rodata), PMD_SIZE);
-
-	map.pfn = __phys_to_pfn(start);
-	map.virtual = __phys_to_virt(start);
-	map.length = end - start;
-	map.type = MT_MEMORY;
-
-	create_mapping(&map, true);
-#endif
 }
 
 /*

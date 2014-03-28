@@ -1141,8 +1141,6 @@ static void update_wall_time(void)
 out:
 	write_sequnlock_irqrestore(&timekeeper.lock, flags);
 
-	if (clock_set)
-		clock_was_set_delayed();
 }
 
 /**

@@ -311,6 +311,13 @@ static int msm_ctrl_cmd_done(void *arg)
 		goto ctrl_cmd_done_error;
 	}
 
+	if(command->queue_idx < 0 ||
+		command->queue_idx >= MAX_NUM_ACTIVE_CAMERA) {
+		pr_err("%s: Invalid value OR index %d\n", __func__,
+		  command->queue_idx);
+		goto ctrl_cmd_done_error;
+	}
+
 	if (!g_server_dev.server_queue[command->queue_idx].queue_active) {
 		pr_err("%s: Invalid queue\n", __func__);
 		goto ctrl_cmd_done_error;
@@ -339,7 +346,8 @@ static int msm_ctrl_cmd_done(void *arg)
 				max_control_command_size);
 			goto ctrl_cmd_done_error;
 		}
-		if (copy_from_user(command->value, uptr, command->length)) {
+		if (copy_from_user(command->value, (void __user *)uptr,
+			command->length)) {
 			pr_err("%s: copy_from_user failed, size=%d\n",
 				__func__, sizeof(struct msm_ctrl_cmd));
 			goto ctrl_cmd_done_error;
@@ -1383,6 +1391,15 @@ static long msm_ioctl_server(struct file *file, void *fh,
 		}
 
 		mutex_lock(&g_server_dev.server_queue_lock);
+
+		if(u_isp_event.isp_data.ctrl.queue_idx < 0 ||
+		u_isp_event.isp_data.ctrl.queue_idx >= MAX_NUM_ACTIVE_CAMERA) {
+			pr_err("%s: Invalid index %d\n", __func__,
+				u_isp_event.isp_data.ctrl.queue_idx);
+			rc = -EINVAL;
+			return rc;
+		}
+
 		if (!g_server_dev.server_queue
 			[u_isp_event.isp_data.ctrl.queue_idx].queue_active) {
 			pr_err("%s: Invalid queue\n", __func__);
@@ -1483,6 +1500,14 @@ static int msm_close_server(struct file *fp)
 	mutex_lock(&g_server_dev.server_lock);
 	if (g_server_dev.use_count > 0)
 		g_server_dev.use_count--;
+/* OPPO 2013-11-15 liubin Add for avoid closing repeatly start */
+#ifdef CONFIG_VENDOR_EDIT
+	else {
+		mutex_unlock(&g_server_dev.server_lock);
+		return 0;
+	}
+#endif
+/* OPPO 2013-11-15 liubin Add end */
 	mutex_unlock(&g_server_dev.server_lock);
 
 	if (g_server_dev.use_count == 0) {
@@ -1819,6 +1844,35 @@ static void msm_cam_server_subdev_notify(struct v4l2_subdev *sd,
 		if (p_mctl && p_mctl->isp_notify && p_mctl->vfe_sdev)
 			rc = p_mctl->isp_notify(p_mctl,
 				p_mctl->vfe_sdev, notification, arg);
+		
+/* OPPO 2013-07-29 lanhe Add for m9m0 caf start */
+#ifdef CONFIG_M9MO
+		if(notification == NOTIFY_VFE_PIX_SOF_COUNT)
+		{
+			struct sensor_cfg_data cfgarg;
+			cfgarg.cfgtype = CFG_FRAME_NOTIFICATION;
+			if (p_mctl && p_mctl->sensor_sdev)
+			    v4l2_subdev_call(p_mctl->sensor_sdev, core, ioctl,
+				VIDIOC_MSM_SENSOR_CFG, &cfgarg);
+			
+		}
+		
+		if (p_mctl && p_mctl->vfe_output_mode == VFE_OUTPUTS_MAIN_AND_THUMB)
+		{
+			if (NOTIFY_VFE_MSG_OUT == notification)
+			{
+				struct sensor_cfg_data cfgarg;
+				printk("%s: capture stream output \r\n", __func__);
+				/* send cmd to get exif info */
+				cfgarg.cfgtype = CFG_FRAME_OUT;
+				if (p_mctl && p_mctl->sensor_sdev)
+				    v4l2_subdev_call(p_mctl->sensor_sdev, core, ioctl,
+					VIDIOC_MSM_SENSOR_CFG, &cfgarg);
+			}
+		}
+#endif
+/* OPPO 2013-07-29 lanhe Add end */
+		
 		break;
 	case NOTIFY_VFE_IRQ:{
 		struct msm_vfe_cfg_cmd cfg_cmd;
@@ -2651,12 +2705,16 @@ int msm_server_send_ctrl(struct msm_ctrl_cmd *out,
 	struct msm_queue_cmd *event_qcmd;
 	struct msm_ctrl_cmd *ctrlcmd;
 	struct msm_cam_server_dev *server_dev = &g_server_dev;
-	struct msm_device_queue *queue =
-		&server_dev->server_queue[out->queue_idx].ctrl_q;
-
+	struct msm_device_queue *queue;
 	struct v4l2_event v4l2_evt;
 	struct msm_isp_event_ctrl *isp_event;
 	void *ctrlcmd_data;
+
+	if(out->queue_idx < 0 || out->queue_idx >= MAX_NUM_ACTIVE_CAMERA) {
+		pr_err("%s: Invalid index %d\n", __func__, out->queue_idx);
+		return -EINVAL;
+	}
+	queue = &server_dev->server_queue[out->queue_idx].ctrl_q;
 
 	event_qcmd = kzalloc(sizeof(struct msm_queue_cmd), GFP_KERNEL);
 	if (!event_qcmd) {
