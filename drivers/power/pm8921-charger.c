@@ -1952,13 +1952,6 @@ static int pm_chg_iusbmax_set(struct pm8921_chg_chip *chip, int index)
 		return -EINVAL;
 	}
 	
-/* OPPO 2012-11-02 chendx Add begin for Set the max iusb to 1100mA */
-#ifdef CONFIG_VENDOR_EDIT
-	if(reg_val > PM8921_IUSB_MAX)
-		reg_val = PM8921_IUSB_MAX;
-#endif
-/* OPPO 2012-11-02 chendx Modify end */
-
 	temp = reg_val << PM8921_CHG_IUSB_SHIFT;
 
 	/* IUSB_FINE_RES */
@@ -3207,7 +3200,7 @@ static void __pm8921_charger_vbus_draw(unsigned int mA)
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 		if (force_fast_charge == 1)
-			i = 14;
+			i = 10;
 		else if (force_fast_charge == 2) {
 			switch (fast_charge_level) {
 				case FAST_CHARGE_500:
