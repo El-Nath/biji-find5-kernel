@@ -59,7 +59,7 @@
 #else
 #define TP_UPDATE_FIRMWARE  0
 #endif
-#define SUPPORT_DOUBLE_TAP  1
+#define SUPPORT_DOUBLE_TAP  0
 //#define SUPPORT_GLOVES_MODE  //ranfei modify for PVT
 /*****************************************************************/
 
@@ -3153,7 +3153,7 @@ firmware_update:
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_S2W
-	ts->s2w_enabled = false;
+	ts->s2w_enabled = true;
 	ts->s2w_register_threshold = 9;
 	ts->s2w_min_distance = 325;
 	ts->s2w_allow_stroke = true;
