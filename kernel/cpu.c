@@ -339,8 +339,12 @@ static int __cpuinit _cpu_up(unsigned int cpu, int tasks_frozen)
 	ret = __cpu_notify(CPU_UP_PREPARE | mod, hcpu, -1, &nr_calls);
 	if (ret) {
 		nr_calls--;
+/* OPPO 2013-09-12 zhenwx Delete begin for prink th log too much result in usage of cpu  too high */
+#if 0
 		printk(KERN_WARNING "%s: attempt to bring up CPU %u failed\n",
 				__func__, cpu);
+#endif
+/* OPPO 2013-09-12  zhenwx Delete end */
 		goto out_notify;
 	}
 
