@@ -1913,7 +1913,7 @@ err_no_context_mgr_node:
 		     tr->data_size, tr->offsets_size);
 	#ifdef CONFIG_VENDOR_EDIT
 	//VENDOR_EDIT: peirs add for debug binder transaction failed, 2013.05.18:
-	printk_ratelimited(KERN_ERR "peirs debug:biner:error code:%d, code-str:%s, end\n", return_error, binder_debug_get_error_code_str(return_error));
+	printk_ratelimited(KERN_ERR "peirs debug:binder:error code:%d, code-str:%s, end\n", return_error, binder_debug_get_error_code_str(return_error));
 	#endif /* VENDOR_EDIT */
 
 	{
