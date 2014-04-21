@@ -27,11 +27,17 @@
 #include <linux/cpumask.h>
 #include <linux/sched.h>
 #include <linux/suspend.h>
+#include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/platform_device.h>
 #include <mach/socinfo.h>
 #include <mach/cpufreq.h>
 
 #include "acpuclock.h"
 
+static struct clk *cpu_clk[NR_CPUS];
+static bool is_clk;
+static bool is_sync;
 struct cpufreq_work_struct {
 	struct work_struct work;
 	struct cpufreq_policy *policy;
@@ -198,6 +204,9 @@ static int msm_cpufreq_verify(struct cpufreq_policy *policy)
 
 static unsigned int msm_cpufreq_get_freq(unsigned int cpu)
 {
+	if (is_clk)
+		return clk_get_rate(cpu_clk[cpu]) / 1000;
+
 	return acpuclk_get_rate(cpu);
 }
 
@@ -278,8 +287,12 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	 * be changed independently. Each cpu is bound to
 	 * same frequency. Hence set the cpumask to all cpu.
 	 */
-	if (cpu_is_msm8625())
+	if (cpu_is_msm8625() || (is_clk && is_sync))
 		cpumask_setall(policy->cpus);
+	
+	/* synchronous cpus share the same policy */
+	if (is_clk && !cpu_clk[policy->cpu])
+		return 0;
 
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
@@ -292,7 +305,11 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
 
-	cur_freq = acpuclk_get_rate(policy->cpu);
+	if (is_clk)
+		cur_freq = clk_get_rate(cpu_clk[policy->cpu])/1000;
+	else
+		cur_freq = acpuclk_get_rate(policy->cpu);
+
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
 	    CPUFREQ_RELATION_H, &index) &&
 	    cpufreq_frequency_table_target(policy, table, cur_freq,
