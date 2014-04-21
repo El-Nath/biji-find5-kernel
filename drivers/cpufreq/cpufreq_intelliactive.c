@@ -129,7 +129,7 @@ static bool io_is_busy = 1;
  * up_threshold_any_cpu_freq then do not let the frequency to drop below
  * sync_freq
  */
-static unsigned int up_threshold_any_cpu_load = 95;
+static unsigned int up_threshold_any_cpu_load = 97;
 static unsigned int sync_freq = 702000;
 static unsigned int up_threshold_any_cpu_freq = 918000;
 
@@ -472,7 +472,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 					continue;
 
 				max_load = max(max_load, picpu->prev_load);
-				max_freq = max(max_freq, picpu->policy->cur);
+				max_freq = max(max_freq, picpu->target_freq);
 			}
 
 			if (max_freq > up_threshold_any_cpu_freq &&
@@ -1266,28 +1266,11 @@ static void interactive_input_event(struct input_handle *handle,
 	}
 }
 
-static int input_dev_filter(const char *input_dev_name)
-{
-	if (strstr(input_dev_name, "touchscreen") ||
-		strstr(input_dev_name, "synaptics-rmi-ts") ||
-	    strstr(input_dev_name, "touch_dev") ||
-	    strstr(input_dev_name, "sec-touchscreen") ||
-	    strstr(input_dev_name, "keypad")) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-
 static int interactive_input_connect(struct input_handler *handler,
 		struct input_dev *dev, const struct input_device_id *id)
 {
 	struct input_handle *handle;
 	int error;
-
-	if (input_dev_filter(dev->name))
-		return -ENODEV;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -1321,8 +1304,21 @@ static void interactive_input_disconnect(struct input_handle *handle)
 }
 
 static const struct input_device_id interactive_ids[] = {
-	{ .driver_info = 1 },
-	{ },
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
+			    BIT_MASK(ABS_MT_POSITION_X) |
+			    BIT_MASK(ABS_MT_POSITION_Y) },
+	}, /* multi-touch touchscreen */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
+		.absbit = { [BIT_WORD(ABS_X)] =
+			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
+	}, /* touchpad */
 };
 
 static struct input_handler interactive_input_handler = {
@@ -1389,6 +1385,8 @@ static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 			pcpu->hispeed_validate_time =
 				pcpu->floor_validate_time;
 			down_write(&pcpu->enable_sem);
+			del_timer_sync(&pcpu->cpu_timer);
+			del_timer_sync(&pcpu->cpu_slack_timer);
 			cpufreq_interactive_timer_start(j);
 			pcpu->governor_enabled = 1;
 			up_write(&pcpu->enable_sem);
@@ -1426,6 +1424,7 @@ static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 			pcpu = &per_cpu(cpuinfo, j);
 			down_write(&pcpu->enable_sem);
 			pcpu->governor_enabled = 0;
+			pcpu->target_freq = 0;
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
 			up_write(&pcpu->enable_sem);
