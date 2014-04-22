@@ -691,7 +691,13 @@ done:
 	if ((memdesc->sglen_alloc * sizeof(struct page *)) > PAGE_SIZE)
 		vfree(pages);
 	else
+/* OPPO 2013-10-16 gousj Modify begin for incorrect memory free caused system crash */
+#ifndef CONFIG_VENDOR_EDIT	
 		kfree(pages);
+#else
+	kfree(&(*pages));
+#endif
+/* OPPO 2013-10-16 gousj Modify end */
 
 	if (ret)
 		kgsl_sharedmem_free(memdesc);
