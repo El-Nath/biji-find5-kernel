@@ -218,9 +218,13 @@ static int __cpuinit msm_thermal_cpu_callback(struct notifier_block *nfb,
 		if (core_control_enabled &&
 			(msm_thermal_info.core_control_mask & BIT(cpu)) &&
 			(cpus_offlined & BIT(cpu))) {
+/* OPPO 2013-09-12 zhenwx Delete begin for prink the log too much result in usage of cpu  too high */
+#if 0
 			pr_info(
 			"%s: Preventing cpu%d from coming online.\n",
 				KBUILD_MODNAME, cpu);
+#endif
+/* OPPO 2013-09-12 zhenwx Delete end */
 			return NOTIFY_BAD;
 		}
 	}
