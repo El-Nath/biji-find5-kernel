@@ -196,10 +196,32 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, freqs->cpu);
 	int j;
 
+/* OPPO 2013-10-29 huanggd add for cpu load calc*/
+{
+	struct cpufreq_policy cpu_policy;
+	static int init_cpu2 = 1, init_cpu3 = 1;
+	if (unlikely(init_cpu2 && freqs->cpu ==2)
+		|| unlikely(init_cpu3 && freqs->cpu ==3)) {
+		cpufreq_get_policy(&cpu_policy,freqs->cpu);
+		cpumask_copy(this_cpu->related_cpus, cpu_policy.cpus);
+		if (freqs->cpu == 2)
+			init_cpu2 = 0;
+		if (freqs->cpu == 3)
+			init_cpu3 = 0;		
+		printk("%s: init cpu%d\n", __func__, freqs->cpu);
+	}
+}
+/* OPPO 2013-10-29 huanggd add end*/
+
 	switch (val) {
 	case CPUFREQ_POSTCHANGE:
 		for_each_cpu(j, this_cpu->related_cpus) {
 			struct cpu_load_data *pcpu = &per_cpu(cpuload, j);
+
+			//huanggd tmp
+			//printk("%s: cpu(%d) related cpu:%lu\n", __func__, freqs->cpu, *cpumask_bits( this_cpu->related_cpus));	
+			//printk("%s: j(%d) %u->%u\n", __func__, j, freqs->old, freqs->new);
+
 			mutex_lock(&pcpu->cpu_load_mutex);
 			update_average_load(freqs->old, freqs->cpu);
 			pcpu->cur_freq = freqs->new;
