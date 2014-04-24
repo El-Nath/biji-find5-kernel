@@ -47,7 +47,7 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x4501,
-		.vreg[VREG_CORE] = { "krait0", 1400000 },
+		.vreg[VREG_CORE] = { "krait0", 1450000 },
 		.vreg[VREG_MEM]  = { "krait0_mem", 1150000 },
 		.vreg[VREG_DIG]  = { "krait0_dig", 1150000 },
 		.vreg[VREG_HFPLL_A] = { "krait0_hfpll", 1800000 },
@@ -58,7 +58,7 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x5501,
-		.vreg[VREG_CORE] = { "krait1", 1400000 },
+		.vreg[VREG_CORE] = { "krait1", 1450000 },
 		.vreg[VREG_MEM]  = { "krait1_mem", 1150000 },
 		.vreg[VREG_DIG]  = { "krait1_dig", 1150000 },
 		.vreg[VREG_HFPLL_A] = { "krait1_hfpll", 1800000 },
@@ -69,7 +69,7 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x6501,
-		.vreg[VREG_CORE] = { "krait2", 1400000 },
+		.vreg[VREG_CORE] = { "krait2", 1450000 },
 		.vreg[VREG_MEM]  = { "krait2_mem", 1150000 },
 		.vreg[VREG_DIG]  = { "krait2_dig", 1150000 },
 		.vreg[VREG_HFPLL_A] = { "krait2_hfpll", 1800000 },
@@ -80,7 +80,7 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x7501,
-		.vreg[VREG_CORE] = { "krait3", 1400000 },
+		.vreg[VREG_CORE] = { "krait3", 1450000 },
 		.vreg[VREG_MEM]  = { "krait3_mem", 1150000 },
 		.vreg[VREG_DIG]  = { "krait3_dig", 1150000 },
 		.vreg[VREG_HFPLL_A] = { "krait3_hfpll", 1800000 },
@@ -138,7 +138,7 @@ static struct l2_level l2_freq_tbl[] __initdata = {
 };
 
 static struct acpu_level tbl_slow[] __initdata = {
-	{ 1, {    81000, HFPLL, 0, 0x06 }, L2(0),   750000 },
+	{ 1, {    81000, HFPLL, 0, 0x06 }, L2(0),   850000 },
 	{ 1, {   162000, HFPLL, 0, 0x0C }, L2(0),   875000 }, 
 	{ 1, {   270000, HFPLL, 0, 0x14 }, L2(0),   900000 }, 
 	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   950000 },
@@ -165,7 +165,7 @@ static struct acpu_level tbl_slow[] __initdata = {
 };
 
 static struct acpu_level tbl_nom[] __initdata = {
-	{ 1, {    81000, HFPLL, 0, 0x06 }, L2(0),   750000 },
+	{ 1, {    81000, HFPLL, 0, 0x06 }, L2(0),   775000 },
 	{ 1, {   162000, HFPLL, 0, 0x0C }, L2(0),   825000 }, 
 	{ 1, {   270000, HFPLL, 0, 0x14 }, L2(0),   850000 }, 
 	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   900000 },
