@@ -138,16 +138,6 @@ static int two_phase_freq_array[NR_CPUS] = {[0 ... NR_CPUS-1] = 1242000} ;
 static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 		unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIACTIVE
-static
-#endif
-struct cpufreq_governor cpufreq_gov_intelliactive = {
-	.name = "intelliactive",
-	.governor = cpufreq_governor_intelliactive,
-	.max_transition_latency = 10000000,
-	.owner = THIS_MODULE,
-};
-
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 						  cputime64_t *wall)
 {
@@ -1364,9 +1354,6 @@ static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		if (!cpu_online(policy->cpu))
-			return -EINVAL;
-
 		mutex_lock(&gov_lock);
 
 		freq_table =
@@ -1484,6 +1471,16 @@ static int cpufreq_governor_intelliactive(struct cpufreq_policy *policy,
 	}
 	return 0;
 }
+
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIACTIVE
+static
+#endif
+struct cpufreq_governor cpufreq_gov_intelliactive = {
+	.name = "intelliactive",
+	.governor = cpufreq_governor_intelliactive,
+	.max_transition_latency = 10000000,
+	.owner = THIS_MODULE,
+};
 
 static void cpufreq_interactive_nop_timer(unsigned long data)
 {
