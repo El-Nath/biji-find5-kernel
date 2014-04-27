@@ -1182,6 +1182,29 @@ static inline struct ipv6_rt_hdr *ip6_rthdr_dup(struct ipv6_rt_hdr *src,
 	return src ? kmemdup(src, (src->hdrlen + 1) * 8, gfp) : NULL;
 }
 
+static void ip6_append_data_mtu(unsigned int *mtu,
+                                 int *maxfraglen,
+                                 unsigned int fragheaderlen,
+                                 struct sk_buff *skb,
+                                 struct rt6_info *rt,
+                                 unsigned int orig_mtu)
+ {
+         if (!(rt->dst.flags & DST_XFRM_TUNNEL)) {
+                 if (skb == NULL) {
+                         /* first fragment, reserve header_len */
+                           *mtu = orig_mtu - rt->dst.header_len;
+ 
+                 } else {
+                         /*
+                          * this fragment is not first, the headers
+                          * space is regarded as data space.
+                          */
+                         *mtu = orig_mtu;
+                 }
+                 *maxfraglen = ((*mtu - fragheaderlen) & ~7)
+                               + fragheaderlen - sizeof(struct frag_hdr);
+         }
+ }
 int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 	int offset, int len, int odd, struct sk_buff *skb),
 	void *from, int length, int transhdrlen,
@@ -1191,12 +1214,11 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *np = inet6_sk(sk);
 	struct inet_cork *cork;
-	struct sk_buff *skb;
-	unsigned int maxfraglen, fragheaderlen;
+	struct sk_buff *skb, *skb_prev = NULL;
+	unsigned int maxfraglen, fragheaderlen, mtu, orig_mtu;
 	int exthdrlen;
 	int dst_exthdrlen;
 	int hh_len;
-	int mtu;
 	int copy;
 	int err;
 	int offset = 0;
@@ -1249,8 +1271,12 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 		inet->cork.fl.u.ip6 = *fl6;
 		np->cork.hop_limit = hlimit;
 		np->cork.tclass = tclass;
-		mtu = np->pmtudisc == IPV6_PMTUDISC_PROBE ?
+		if (rt->dst.flags & DST_XFRM_TUNNEL)
+		mtu = np->pmtudisc >= IPV6_PMTUDISC_PROBE ?
 		      rt->dst.dev->mtu : dst_mtu(&rt->dst);
+	else
+                        mtu = np->pmtudisc >= IPV6_PMTUDISC_PROBE ?
+                              rt->dst.dev->mtu : dst_mtu(rt->dst.path);
 		if (np->frag_size < mtu) {
 			if (np->frag_size)
 				mtu = np->frag_size;
@@ -1274,6 +1300,7 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 		dst_exthdrlen = 0;
 		mtu = cork->fragsize;
 	}
+	orig_mtu = mtu;
 
 	hh_len = LL_RESERVED_SPACE(rt->dst.dev);
 
@@ -1346,16 +1373,20 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 			unsigned int fraglen;
 			unsigned int fraggap;
 			unsigned int alloclen;
-			struct sk_buff *skb_prev;
 alloc_new_skb:
-			skb_prev = skb;
 
 			/* There's no room in the current skb */
 			if (skb_prev)
 				fraggap = skb_prev->len - maxfraglen;
 			else
 				fraggap = 0;
-
+                         /* update mtu and maxfraglen if necessary */
+                         if (skb == NULL || skb_prev == NULL)
+                                 ip6_append_data_mtu(&mtu, &maxfraglen,
+                                                     fragheaderlen, skb, rt,
+                                                     orig_mtu);
+ 
+                         skb_prev = skb;
 			/*
 			 * If remaining data exceeds the mtu,
 			 * we know we need more fragment(s).
@@ -1620,8 +1651,8 @@ int ip6_push_pending_frames(struct sock *sk)
 	if (proto == IPPROTO_ICMPV6) {
 		struct inet6_dev *idev = ip6_dst_idev(skb_dst(skb));
 
-		ICMP6MSGOUT_INC_STATS_BH(net, idev, icmp6_hdr(skb)->icmp6_type);
-		ICMP6_INC_STATS_BH(net, idev, ICMP6_MIB_OUTMSGS);
+		ICMP6MSGOUT_INC_STATS(net, idev, icmp6_hdr(skb)->icmp6_type);
+		ICMP6_INC_STATS(net, idev, ICMP6_MIB_OUTMSGS);
 	}
 
 	err = ip6_local_out(skb);
