@@ -79,13 +79,14 @@
 #include <mach/restart.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_serial_hs.h>
+#include <linux/persistent_ram.h>
+
 #ifdef CONFIG_VENDOR_EDIT
 /* OPPO 2013-02-20 yuyi Add begin nfc*/
 #include <linux/nfc/pn544.h>
 #include <linux/regulator/consumer.h>
 /* OPPO 2013-02-20 yuyi Add end */
 #endif
-#include <linux/persistent_ram.h>
 
 #include "msm_watchdog.h"
 #include "board-8064.h"
@@ -2429,7 +2430,7 @@ static struct msm_thermal_data msm_thermal_pdata = {
 	.poll_ms = 500,
 	.limit_temp_degC = 65,
 	.temp_hysteresis_degC = 10,
-	.freq_step = 5,
+	.freq_step = 4,
 	.core_limit_temp_degC = 75,
 	.core_temp_hysteresis_degC = 10,
 	.core_control_mask = 0xe,
