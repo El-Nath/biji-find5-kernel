@@ -10296,6 +10296,11 @@ static struct kobj_type  codec_debug_ktype =
 
 /*OPPO 2012-08-06 zhzhyon Add end*/
 
+#ifdef CONFIG_SOUND_CONTROL_HAX_GPL
+struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
+		(struct snd_kcontrol_new *)tabla_snd_controls;
+#endif
+
 static int tabla_codec_probe(struct snd_soc_codec *codec)
 {
 	struct wcd9xxx *control;
