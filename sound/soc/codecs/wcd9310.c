@@ -4351,6 +4351,7 @@ static int tabla_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 
 	return 0;
 }
+
 #define TABLA_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
 
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
@@ -4406,6 +4407,7 @@ int tabla_write(struct snd_soc_codec *codec, unsigned int reg,
 			dev_err(codec->dev, "Cache write to %x failed: %d\n",
 				reg, ret);
 	}
+
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
 	if (!snd_hax_reg_access(reg)) {
 		if (!((val = snd_hax_cache_read(reg)) != -1)) {
@@ -10333,6 +10335,8 @@ static struct kobj_type  codec_debug_ktype =
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
 struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
 		(struct snd_kcontrol_new *)tabla_snd_controls;
+struct snd_soc_codec *fauxsound_codec_ptr;
+EXPORT_SYMBOL(fauxsound_codec_ptr);
 #endif
 
 static int tabla_codec_probe(struct snd_soc_codec *codec)
