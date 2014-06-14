@@ -1649,7 +1649,13 @@ config USERSPACE_GPU_CONTROL
 	bool "Enable Userspace GPU Voltage Control"
 	default y
 	help
-	  Userspace GPU Voltage Control	  
+	  Userspace GPU Voltage Control	
+	  
+config OVERCLOCK_GPU
+	bool "Enable GPU 487.5"
+	default n
+	help
+	  GPU Overclocking to 487.5	    
 	  
 if CPU_FREQ_MSM
 
