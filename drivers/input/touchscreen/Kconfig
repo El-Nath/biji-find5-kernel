@@ -979,6 +979,11 @@ config TOUCHSCREEN_BKTP
 	help
 	  This enables support for the back touchpad over I2C based touchscreens.	  
 
+config TOUCHSCREEN_SYNAPTICS_DT2W
+    bool "DT2W (DoubleTap2Wake) for Synaptics s3202 i2c touchscreen"
+    depends on TOUCHSCREEN_SYNAPTICS_S3202_I2C_RMI
+    default n
+    
 config TOUCHSCREEN_SYNAPTICS_S2W
     bool "S2W (Sweep2Wake) for Synaptics s3202 i2c touchscreen"
     depends on TOUCHSCREEN_SYNAPTICS_S3202_I2C_RMI
