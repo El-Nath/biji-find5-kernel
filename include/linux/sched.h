@@ -147,7 +147,6 @@ extern void sched_update_nr_prod(int cpu, unsigned long nr, bool inc);
 extern void sched_get_nr_running_avg(int *avg, int *iowait_avg);
 #endif
 extern unsigned long get_avg_nr_running(unsigned int cpu);
-extern unsigned long avg_nr_running(void);
 
 extern void calc_global_load(unsigned long ticks);
 extern void update_cpu_load_nohz(void);
