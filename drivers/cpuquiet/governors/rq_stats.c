@@ -66,6 +66,8 @@ static bool log_hotplugging = false;
 	if (log_hotplugging) pr_info("[RQ_STATS]: " msg); \
 	} while (0)
 	
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+	
 static unsigned int get_lightest_loaded_cpu_n(void)
 {
 	unsigned long min_avg_runnables = ULONG_MAX;
@@ -73,7 +75,7 @@ static unsigned int get_lightest_loaded_cpu_n(void)
 	int i;
 
 	for_each_online_cpu(i) {
-		unsigned int nr_runnables = get_avg_nr_running(i);
+		unsigned int nr_runnables = avg_cpu_nr_running(i);
 
 		if (i > 0 && min_avg_runnables > nr_runnables) {
 			cpu = i;
