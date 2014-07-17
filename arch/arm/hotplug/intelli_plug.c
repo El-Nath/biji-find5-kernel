@@ -68,6 +68,13 @@ static int persist_count = 0;
 
 static bool suspended = false;
 
+struct ip_cpu_info {
+	unsigned int curr_max;
+	unsigned long cpu_nr_running;
+};
+
+static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
+
 #define CAPACITY_RESERVE	50
 
 #if defined(CONFIG_ARCH_MSM8960) || defined(CONFIG_ARCH_APQ8064) || \
