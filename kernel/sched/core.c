@@ -2222,19 +2222,31 @@ unsigned long avg_nr_running(void)
 	return sum;
 }
 EXPORT_SYMBOL(avg_nr_running);
-#endif
 
-unsigned long get_avg_nr_running(unsigned int cpu)
+unsigned long avg_cpu_nr_running(unsigned int cpu)
 {
-	struct rq *q;
+	unsigned int seqcnt, ave_nr_running;
 
-	if (cpu >= nr_cpu_ids)
-		return 0;
+	struct nr_stats_s *stats = &per_cpu(runqueue_stats, cpu);
+	struct rq *q = cpu_rq(cpu);
 
-	q = cpu_rq(cpu);
+	/*
+	 * Update average to avoid reading stalled value if there were
+	 * no run-queue changes for a long time. On the other hand if
+	 * the changes are happening right now, just read current value
+	 * directly.
+	 */
+	seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
+	ave_nr_running = do_avg_nr_running(q);
+	if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
+		read_seqcount_begin(&stats->ave_seqcnt);
+		ave_nr_running = stats->ave_nr_running;
+	}
 
-	return q->ave_nr_running;
+	return ave_nr_running;
 }
+EXPORT_SYMBOL(avg_cpu_nr_running);
+#endif
 
 /*
  * Global load-average calculations
