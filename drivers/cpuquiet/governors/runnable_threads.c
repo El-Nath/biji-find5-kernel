@@ -57,6 +57,8 @@ static unsigned int nr_run_thresholds[] = {
 
 DEFINE_MUTEX(runnables_work_lock);
 
+extern unsigned long avg_nr_running(void);
+
 static void update_runnables_state(void)
 {
 	unsigned int nr_cpus = num_online_cpus();
@@ -86,6 +88,8 @@ static void update_runnables_state(void)
 	}
 }
 
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+
 static unsigned int get_lightest_loaded_cpu_n(void)
 {
 	unsigned long min_avg_runnables = ULONG_MAX;
@@ -93,7 +97,7 @@ static unsigned int get_lightest_loaded_cpu_n(void)
 	int i;
 
 	for_each_online_cpu(i) {
-		unsigned int nr_runnables = get_avg_nr_running(i);
+		unsigned int nr_runnables = avg_cpu_nr_running(i);
 
 		if (i > 0 && min_avg_runnables > nr_runnables) {
 			cpu = i;
