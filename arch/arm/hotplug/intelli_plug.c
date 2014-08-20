@@ -69,6 +69,7 @@ static int persist_count = 0;
 static bool suspended = false;
 
 struct ip_cpu_info {
+	unsigned int sys_max;
 	unsigned int curr_max;
 	unsigned long cpu_nr_running;
 };
@@ -354,15 +355,12 @@ static void intelli_plug_suspend(struct early_suspend *handler)
 
 static void wakeup_boost(void)
 {
-	unsigned int cpu, ret;
-	struct cpufreq_policy policy;
+	unsigned int cpu;
+	struct cpufreq_policy *policy;
 
 	for_each_online_cpu(cpu) {
-		ret = cpufreq_get_policy(&policy, cpu);
-		if (ret)
-			continue;
-
-		policy.cur = policy.max;
+		policy = cpufreq_cpu_get(cpu);
+		policy->cur = policy->max;
 		cpufreq_update_policy(cpu);
 	}
 }
