@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, 2014 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -255,12 +255,11 @@ long audio_in_ioctl(struct file *file,
 		   but with in maximum frames number */
 		if ((cfg.buffer_size < (audio->min_frame_size+ \
 			sizeof(struct meta_out_dsp))) ||
-			(cfg.buffer_count < FRAME_NUM)) {
+			(cfg.buffer_count > FRAME_NUM)) {
 			rc = -EINVAL;
 			break;
 		}
-		if ((cfg.buffer_size > FRAME_SIZE) ||
-			(cfg.buffer_count != FRAME_NUM)) {
+		if (cfg.buffer_size > FRAME_SIZE) {
 			rc = -EINVAL;
 			break;
 		}
