@@ -34,7 +34,7 @@
 #undef DEBUG_INTELLI_PLUG
 
 #define INTELLI_PLUG_MAJOR_VERSION	3
-#define INTELLI_PLUG_MINOR_VERSION	7
+#define INTELLI_PLUG_MINOR_VERSION	8
 
 #define DEF_SAMPLING_MS			(268)
 
@@ -70,7 +70,7 @@ static bool suspended = false;
 
 struct ip_cpu_info {
 	unsigned int sys_max;
-	unsigned int curr_max;
+	unsigned int cur_max;
 	unsigned long cpu_nr_running;
 };
 
@@ -357,10 +357,12 @@ static void wakeup_boost(void)
 {
 	unsigned int cpu;
 	struct cpufreq_policy *policy;
+	struct ip_cpu_info *l_ip_info;
 
 	for_each_online_cpu(cpu) {
 		policy = cpufreq_cpu_get(cpu);
-		policy->cur = policy->max;
+		l_ip_info = &per_cpu(ip_info, 0);
+		policy->cur = l_ip_info->cur_max;
 		cpufreq_update_policy(cpu);
 	}
 }
@@ -373,8 +375,7 @@ static void __cpuinit intelli_plug_resume(struct early_suspend *handler)
 {
 
 	if (intelli_plug_active) {
-		int num_of_active_cores;
-		int i;
+		int cpu;
 
 		mutex_lock(&intelli_plug_mutex);
 		/* keep cores awake long enough for faster wake up */
@@ -382,11 +383,10 @@ static void __cpuinit intelli_plug_resume(struct early_suspend *handler)
 		suspended = false;
 		mutex_unlock(&intelli_plug_mutex);
 
-		/* wake up everyone */
-		num_of_active_cores = num_possible_cpus();
-
-		for (i = 1; i < num_of_active_cores; i++) {
-			cpu_up(i);
+		for_each_possible_cpu(cpu) {
+			if (cpu == 0)
+				continue;
+			cpu_up(cpu);
 		}
 
 		wakeup_boost();
@@ -509,10 +509,11 @@ int __init intelli_plug_init(void)
 	}
 
 #if defined (CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
-	for_each_possible_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		l_ip_info = &per_cpu(ip_info, cpu);
 		policy = cpufreq_cpu_get(cpu);
 		l_ip_info->sys_max = policy->cpuinfo.max_freq;
+		l_ip_info->cur_max = policy->max;
 	}
 #endif
 
