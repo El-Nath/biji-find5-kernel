@@ -34,6 +34,8 @@
 #define UPDATE_BUSY_VAL		1000000
 #define UPDATE_BUSY		50
 
+unsigned long internal_max = 400000000;
+
 struct clk_pair {
 	const char *name;
 	uint map;
@@ -358,19 +360,22 @@ static int kgsl_pwrctrl_num_pwrlevels_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", pwr->num_pwrlevels - 1);
 }
 
-/* Given a GPU clock value, return the nearest powerlevel */
+/* Given a GPU clock value, return the lowest matching powerlevel */
 
 static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 {
 	int i;
 
-	for (i = 0; i < pwr->num_pwrlevels - 1; i++) {
+	for (i = pwr->num_pwrlevels - 1; i >= 0; i--) {
 		if (abs(pwr->pwrlevels[i].gpu_freq - clock) < 5000000)
 			return i;
 	}
 
 	return -ERANGE;
 }
+
+extern void SetGPUpll_config(u32 loc, unsigned long freq);
+extern void SetMAXGPUFreq(unsigned long freq);
 
 static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 					 struct device_attribute *attr,
@@ -390,6 +395,21 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	if (ret != 1)
 		return count;
 
+	if (val == 400000000)
+	{
+		SetGPUpll_config(0x1D, val);
+	}
+	else if (val == 450000000)
+	{
+		SetGPUpll_config(0x21, val);
+	}
+	else if (val == 487500000)
+	{
+		SetGPUpll_config(0x24, val);
+	}
+
+	internal_max = val;
+		
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level < 0)
@@ -420,8 +440,8 @@ static int kgsl_pwrctrl_max_gpuclk_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
-	return snprintf(buf, PAGE_SIZE, "%d\n",
-			pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq);
+	return snprintf(buf, PAGE_SIZE, "%ld\n",
+			internal_max);
 }
 
 static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
@@ -460,8 +480,12 @@ static int kgsl_pwrctrl_gpuclk_show(struct device *dev,
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
-	return snprintf(buf, PAGE_SIZE, "%d\n",
+	if (pwr->active_pwrlevel != 0)
+		return snprintf(buf, PAGE_SIZE, "%d\n",
 			pwr->pwrlevels[pwr->active_pwrlevel].gpu_freq);
+	else
+		return snprintf(buf, PAGE_SIZE, "%ld\n",
+			internal_max);
 }
 
 static int kgsl_pwrctrl_pwrnap_store(struct device *dev,
@@ -617,8 +641,14 @@ static int kgsl_pwrctrl_gpu_available_frequencies_show(
 		return 0;
 	pwr = &device->pwrctrl;
 	for (index = 0; index < pwr->num_pwrlevels - 1; index++)
-		num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",
-		pwr->pwrlevels[index].gpu_freq);
+		if (index == 0)
+		{
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",487500000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",450000000);
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",400000000);
+		}
+		else
+			num_chars += snprintf(buf + num_chars, PAGE_SIZE, "%d ",pwr->pwrlevels[index].gpu_freq);
 	buf[num_chars++] = '\n';
 	return num_chars;
 }
